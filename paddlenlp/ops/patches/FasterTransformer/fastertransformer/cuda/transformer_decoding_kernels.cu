@@ -61,6 +61,45 @@ __global__ void embeddings_kernels(T* from_tensor,
 }
 
 template <typename T>
+__global__ void ernie_vilg_embeddings_kernels(T* from_tensor,
+                                   const T* embedding_table,
+                                   const T* row_position_encoding,
+                                   const T* col_position_encoding,
+                                   const int* memory_sequence_length,
+                                   const int* img_ids,
+                                   const int step,
+                                   const int batch_size,
+                                   const int hidden_units,
+                                   const bool pos_bias,
+                                   const int img_size) {
+  // 1. lookup from embedding table
+  // 2. add the position encoding
+  // 3. add the token type embedding
+  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+       index < batch_size * hidden_units;
+       index += blockDim.x * gridDim.x) {
+    const int row_index = index / hidden_units;
+    const int col_index = index % hidden_units;
+
+    int position_index;
+
+    int pos = (pos_bias) ? (step - 1 + memory_sequence_length[row_index])
+                          : (step - 1);
+    position_index = pos * hidden_units + col_index;
+    
+    // img_ids = img_vocab_size - 2
+    //
+    const int img_row_index = step / img_size;
+    const int img_col_index = step % img_size;
+
+    from_tensor[index] =
+        embedding_table[img_ids[row_index] * hidden_units + col_index] +
+        row_position_encoding[img_row_index  * hidden_units + col_index] +
+        col_position_encoding[img_col_index * hidden_units + col_index];
+  }
+}
+
+template <typename T>
 void embeddings_kernel_launcher(T* from_tensor,
                                 const T* embedding_table,
                                 const T* position_encoding_table,
@@ -93,6 +132,35 @@ void embeddings_kernel_launcher(T* from_tensor,
                                                     decoder_role_id,
                                                     role_embedding_table,
                                                     decoder_position_id);
+}
+
+template <typename T>
+void ernie_vilg_embeddings_kernel_launcher(T* from_tensor,
+                                const T* embedding_table,
+                                const T* row_position_encoding,
+                                const T* col_position_encoding,
+                                const int* memory_sequence_length,
+                                const int* img_ids,
+                                const int step,
+                                const int batch_size,
+                                const int hidden_units,
+                                const bool pos_bias,
+                                cudaStream_t stream,
+                                const int img_size) {
+  dim3 grid(min(batch_size, 65536));
+  dim3 block(min(hidden_units, 1024));
+
+  ernie_vilg_embeddings_kernels<T><<<grid, block, 0, stream>>>(from_tensor,
+                                                    embedding_table,
+                                                    row_position_encoding,
+                                                    col_position_encoding,
+                                                    memory_sequence_length,
+                                                    img_ids,
+                                                    step,
+                                                    batch_size,
+                                                    hidden_units,
+                                                    pos_bias,
+                                                    img_size);
 }
 
 template <typename T>

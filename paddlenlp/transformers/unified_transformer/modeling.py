@@ -36,7 +36,7 @@ class UnifiedTransformerPretrainedModel(PretrainedModel):
     and loading pretrained models.
     See :class:`~paddlenlp.transformers.model_utils.PretrainedModel` for more details.
     """
-
+    
     model_config_file = "model_config.json"
     pretrained_init_configuration = {
         "unified_transformer-12L-cn": {

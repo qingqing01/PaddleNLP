@@ -97,6 +97,23 @@ void embeddings_kernel_launcher(T* from_tensor,
                                 const int* decoder_position_id = nullptr);
 
 template <typename T>
+void ernie_vilg_embeddings_kernel_launcher(T* from_tensor,
+                                const T* embedding_table,
+                                const T* position_encoding_table,
+                                const T* type_table,
+                                const int* memory_sequence_length,
+                                const int* type_id,
+                                const int* word_ids,
+                                const int step,
+                                const int batch_size,
+                                const int hidden_units,
+                                const bool pos_bias,
+                                cudaStream_t stream,
+                                const int* decoder_role_id = nullptr,
+                                const T* role_embedding_table = nullptr,
+                                const int* decoder_position_id = nullptr);
+
+template <typename T>
 void start_ids_embeddings_kernel_launcher(T* from_tensor,
                                 const T* embedding_table,
                                 const T* position_encoding_table,
